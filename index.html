@@ -438,8 +438,8 @@ const Audio = {
   }
 };
 
-// Logical resolution (portrait, tablet-friendly)
-const GW = 720, GH = 1080;
+// Logical resolution (landscape, tablet-friendly)
+const GW = 1280, GH = 800;
 
 /** Fit canvas to viewport while preserving aspect ratio + DPR sharpness */
 function fit() {
@@ -470,13 +470,12 @@ document.addEventListener('dblclick', e => e.preventDefault(), {passive:false});
 // SECTION 2 — LEVEL LAYOUT (Platforms + Ladders)
 // ============================================================
 const PLAT_H = 18;
-// 5 platforms (girders) — bottom platform is wider, top platform holds the goal
+// 4 platforms for landscape — wide horizontal traversal between climbs
 const platforms = [
-  { x: 0,   y: 920, w: GW,  hasLadderUp: [{x: 110}] },
-  { x: 0,   y: 770, w: 620, hasLadderUp: [{x: 540}] },
-  { x: 100, y: 620, w: 620, hasLadderUp: [{x: 160}] },
-  { x: 0,   y: 470, w: 620, hasLadderUp: [{x: 540}] },
-  { x: 100, y: 320, w: 620, hasLadderUp: [{x: 360}] }, // top platform with goal
+  { x: 0,   y: 690, w: GW,   hasLadderUp: [{x: 220},  {x: 1040}] }, // bottom — two ladders to spread players out
+  { x: 0,   y: 540, w: 1140, hasLadderUp: [{x: 950}] },             // gap on the right
+  { x: 140, y: 390, w: 1140, hasLadderUp: [{x: 240}] },             // gap on the left
+  { x: 0,   y: 240, w: GW,   hasLadderUp: [] }                       // top — full width, holds the goal
 ];
 
 // Build ladders connecting each platform pair
@@ -488,12 +487,12 @@ for (let i = 0; i < platforms.length - 1; i++) {
       x: L.x,
       yTop: upper.y,
       yBottom: lower.y,
-      w: 44
+      w: 48
     });
   }
 }
 
-// Goal sits on the top platform
+// Goal sits on the top platform, centered
 const goal = {
   x: GW/2 - 70,
   y: platforms[platforms.length-1].y - 110,
@@ -541,12 +540,15 @@ let gameTime = 0;
 
 /** Spawn a single hazard from the top dispenser */
 function spawnObstacle() {
+  // Hard cap on obstacles to avoid bullet-hell density
+  if (obstacles.length >= 8) return;
   const r = Math.random();
   // 45% tax bill, 35% burn rate, 20% scope creep
   const type = r < 0.45 ? 'taxBill' : (r < 0.80 ? 'burnRate' : 'scopeCreep');
   const topPlat = platforms[platforms.length - 1];
   const dir = Math.random() < 0.5 ? -1 : 1;
-  const speed = 3.0 + Math.random() * 2.0;
+  // Slower base speed — scales with difficulty inside update()
+  const speed = 2.0 + Math.random() * 1.2;
   const w = type === 'taxBill' ? 32 : (type === 'burnRate' ? 30 : 34);
   const h = type === 'taxBill' ? 30 : (type === 'burnRate' ? 34 : 30);
   obstacles.push({
@@ -573,22 +575,21 @@ const collectibles = [];
 
 function spawnCollectibles() {
   collectibles.length = 0;
-  // Layout: each non-top platform gets a mix
-  // Platform 0 (bottom): controller + R&D
-  collectibles.push(mkColl('controller', platforms[0].x + 420, platforms[0].y - 50));
-  collectibles.push(mkColl('rd',         platforms[0].x + 560, platforms[0].y - 50));
+  // Spread across wider platforms — each platform gets 2-3 items
+  // Platform 0 (bottom)
+  collectibles.push(mkColl('controller', 500,  platforms[0].y - 50));
+  collectibles.push(mkColl('rd',         780,  platforms[0].y - 50));
+  collectibles.push(mkColl('controller', 1150, platforms[0].y - 50));
 
-  // Platform 1: VGTR + controller
-  collectibles.push(mkColl('vgtr',       platforms[1].x + 200, platforms[1].y - 50));
-  collectibles.push(mkColl('controller', platforms[1].x + 450, platforms[1].y - 50));
+  // Platform 1
+  collectibles.push(mkColl('vgtr',       320,  platforms[1].y - 50));
+  collectibles.push(mkColl('controller', 640,  platforms[1].y - 50));
+  collectibles.push(mkColl('controller', 880,  platforms[1].y - 50));
 
-  // Platform 2: R&D + controller
-  collectibles.push(mkColl('rd',         platforms[2].x + 280, platforms[2].y - 50));
-  collectibles.push(mkColl('controller', platforms[2].x + 500, platforms[2].y - 50));
-
-  // Platform 3: VGTR + controller
-  collectibles.push(mkColl('vgtr',       platforms[3].x + 220, platforms[3].y - 50));
-  collectibles.push(mkColl('controller', platforms[3].x + 450, platforms[3].y - 50));
+  // Platform 2
+  collectibles.push(mkColl('rd',         480,  platforms[2].y - 50));
+  collectibles.push(mkColl('controller', 760,  platforms[2].y - 50));
+  collectibles.push(mkColl('vgtr',       1080, platforms[2].y - 50));
 }
 
 function mkColl(type, x, y) {
@@ -654,50 +655,50 @@ const jungleBG = {
   stars: []
 };
 (function buildJungle() {
-  // Stars in the sky band (top 280px)
-  for (let i = 0; i < 60; i++) {
+  // Stars in the sky band (top 220px)
+  for (let i = 0; i < 80; i++) {
     jungleBG.stars.push({
       x: Math.random() * GW,
-      y: Math.random() * 260,
+      y: Math.random() * 200,
       r: Math.random() * 1.2 + 0.4,
       tw: Math.random() * Math.PI * 2
     });
   }
-  // Far trees (small, hazy)
-  for (let i = 0; i < 18; i++) {
+  // Far trees (small, hazy) — wider spread for landscape
+  for (let i = 0; i < 32; i++) {
     jungleBG.farTrees.push({
       x: i * 42 + (Math.random() - 0.5) * 20,
-      y: 260 + Math.random() * 30,
-      h: 100 + Math.random() * 80,
+      y: 200 + Math.random() * 30,
+      h: 90 + Math.random() * 70,
       w: 22 + Math.random() * 14
     });
   }
   // Mid trees (taller, layered)
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 22; i++) {
     jungleBG.midTrees.push({
-      x: i * 65 + (Math.random() - 0.5) * 30,
-      y: 300 + Math.random() * 40,
-      h: 180 + Math.random() * 140,
+      x: i * 62 + (Math.random() - 0.5) * 30,
+      y: 240 + Math.random() * 40,
+      h: 160 + Math.random() * 120,
       w: 40 + Math.random() * 20,
       canopy: 60 + Math.random() * 30
     });
   }
   // Hanging vines along the top
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 24; i++) {
     jungleBG.vines.push({
       x: i * 55 + (Math.random() - 0.5) * 30,
-      len: 60 + Math.random() * 140,
+      len: 50 + Math.random() * 100,
       sway: Math.random() * Math.PI * 2,
       swayAmp: 4 + Math.random() * 6,
       leafCount: 2 + Math.floor(Math.random() * 4)
     });
   }
-  // Foreground foliage clumps (along bottom)
-  for (let i = 0; i < 10; i++) {
+  // Foreground foliage clumps (along bottom — spread across full width)
+  for (let i = 0; i < 16; i++) {
     jungleBG.foliage.push({
-      x: i * 80 + Math.random() * 30,
-      y: GH - 200 + Math.random() * 20,
-      size: 30 + Math.random() * 30,
+      x: i * 85 + Math.random() * 30,
+      y: GH - 170 + Math.random() * 20,
+      size: 24 + Math.random() * 24,
       tilt: (Math.random() - 0.5) * 0.4
     });
   }
@@ -737,15 +738,18 @@ window.addEventListener('keyup', e => {
   if (e.key === ' ') keys.jump = false;
 });
 
-// Touch button hit zones (positioned over a stylized arcade control panel)
+// Touch button hit zones — split control panel for landscape tablet play
+// Left thumb: directional pad (left/right side by side, up/down stacked)
+// Right thumb: large JUMP button
 const btns = {
-  left:  { x: 30,        y: GH - 160, w: 120, h: 120, label: '◀' },
-  right: { x: 170,       y: GH - 160, w: 120, h: 120, label: '▶' },
-  up:    { x: GW - 320,  y: GH - 160, w: 100, h: 120, label: '▲' },
-  jump:  { x: GW - 200,  y: GH - 170, w: 170, h: 130, label: 'JUMP' }
+  left:  { x: 30,        y: GH - 130, w: 110, h: 110, label: '◀' },
+  right: { x: 150,       y: GH - 130, w: 110, h: 110, label: '▶' },
+  up:    { x: 270,       y: GH - 130, w: 90,  h: 52,  label: '▲' },
+  down:  { x: 270,       y: GH - 70,  w: 90,  h: 52,  label: '▼' },
+  jump:  { x: GW - 220,  y: GH - 130, w: 190, h: 110, label: 'JUMP' }
 };
 // Mute toggle hit zone — top right of canvas, drawn in HUD
-const muteBtn = { x: GW - 50, y: 105, w: 36, h: 28 };
+const muteBtn = { x: GW - 60, y: 95, w: 40, h: 30 };
 const activeTouches = {};
 
 function pointToGame(clientX, clientY) {
@@ -773,6 +777,7 @@ function handleTouchStart(id, gx, gy) {
       if (name === 'left') keys.left = true;
       if (name === 'right') keys.right = true;
       if (name === 'up') keys.up = true;
+      if (name === 'down') keys.down = true;
       if (name === 'jump') { keys.jump = true; jumpQueued = true; }
       return;
     }
@@ -787,6 +792,7 @@ function handleTouchEnd(id) {
     if (name === 'left') keys.left = false;
     if (name === 'right') keys.right = false;
     if (name === 'up') keys.up = false;
+    if (name === 'down') keys.down = false;
     if (name === 'jump') keys.jump = false;
   }
 }
@@ -833,9 +839,9 @@ function startGame() {
   confetti.length = 0;
   spawnCollectibles();
   resetPlayer();
-  spawnTimer = 0.5;
+  spawnTimer = 2.5; // grace period before first hazard
   freezeTimer = 0;
-  burstCooldown = 0;
+  burstCooldown = 4;
   gameTime = 0;
   state = 'playing';
   startPanel.classList.add('hidden');
@@ -1007,23 +1013,23 @@ function update(dt) {
   // Slow score gain over time (survival valuation)
   player.score += dt * 8000;
 
-  // ---- Obstacle spawning with difficulty ramp + bursts ----
+  // ---- Obstacle spawning with gentle difficulty ramp + bursts ----
   spawnTimer -= dt;
   burstCooldown -= dt;
-  const difficulty = Math.min(1, gameTime / 45);
+  // Ramps over 60s, capped at 0.7 (so spawn interval never goes below ~0.9s)
+  const difficulty = Math.min(0.7, gameTime / 60);
   if (spawnTimer <= 0 && freezeTimer <= 0) {
     spawnObstacle();
-    const baseInterval = 0.9 - difficulty * 0.55;
-    spawnTimer = baseInterval + Math.random() * 0.4;
+    // Base interval shrinks from ~1.8s to ~0.95s
+    const baseInterval = 1.8 - difficulty * 1.2;
+    spawnTimer = baseInterval + Math.random() * 0.6;
 
-    if (burstCooldown <= 0 && Math.random() < 0.15 + difficulty * 0.25) {
-      const burstCount = 1 + Math.floor(Math.random() * 2);
-      for (let b = 0; b < burstCount; b++) {
-        setTimeout(() => {
-          if (state === 'playing' && freezeTimer <= 0) spawnObstacle();
-        }, (b + 1) * 240);
-      }
-      burstCooldown = 3.8;
+    // Less frequent, smaller bursts
+    if (burstCooldown <= 0 && Math.random() < 0.08 + difficulty * 0.15) {
+      setTimeout(() => {
+        if (state === 'playing' && freezeTimer <= 0) spawnObstacle();
+      }, 320);
+      burstCooldown = 6;
     }
   }
 
@@ -1045,10 +1051,11 @@ function update(dt) {
     o.y = plat.y - o.h - (o.bounceOffset || 0);
 
     // Ladder descent
+    // Ladder descent — slightly less aggressive
     if (o.platIdx > 0 && !o.descending) {
       const lowerPlat = platforms[o.platIdx - 1];
       for (const L of lowerPlat.hasLadderUp) {
-        if (Math.abs(o.x + o.w/2 - L.x) < 8 && Math.random() < 0.16) {
+        if (Math.abs(o.x + o.w/2 - L.x) < 8 && Math.random() < 0.10) {
           o.descending = true;
           o.targetY = lowerPlat.y - o.h;
           o.descendX = L.x - o.w/2;
@@ -1059,11 +1066,12 @@ function update(dt) {
     }
     if (o.descending) {
       o.x = o.descendX;
-      o.y += 5;
+      o.y += 4;
       if (o.y >= o.targetY) {
         o.y = o.targetY;
         o.descending = false;
-        o.vx = (Math.random() < 0.5 ? -1 : 1) * (3.2 + Math.random() * 2.0);
+        // Slower post-descent re-roll
+        o.vx = (Math.random() < 0.5 ? -1 : 1) * (2.0 + Math.random() * 1.2);
       }
     }
 
@@ -1081,6 +1089,19 @@ function update(dt) {
     const pb = { x: player.x + 4, y: player.y + 6, w: player.w - 8, h: player.h - 10 };
     const ob = { x: o.x, y: o.y, w: o.w, h: o.h };
     if (rectsOverlap(pb, ob) && player.stallTimer <= 0) {
+      // STOMP — falling onto the top of a hazard destroys it
+      const playerBottom = player.y + player.h;
+      const fallingOn = player.vy > 1 &&
+                        !player.climbing &&
+                        playerBottom < o.y + o.h * 0.6;
+      if (fallingOn) {
+        player.score += 35000;
+        player.vy = JUMP_VEL * 0.6; // small bounce
+        floater(o.x + o.w/2, o.y, '+£35k Crushed!', '#ffd700');
+        Audio.clearTax();
+        obstacles.splice(i, 1);
+        continue;
+      }
       // R&D aura clears Tax Bills
       if (o.type === 'taxBill' && player.goldAura > 0) {
         player.score += 50000;
@@ -1243,7 +1264,7 @@ function drawBackground() {
   }
 
   // ----- Moon -----
-  const moonX = GW - 110, moonY = 90;
+  const moonX = GW - 130, moonY = 175;
   // Glow halo
   const moonGlow = ctx.createRadialGradient(moonX, moonY, 4, moonX, moonY, 70);
   moonGlow.addColorStop(0, 'rgba(255, 240, 200, 0.5)');
@@ -1253,7 +1274,7 @@ function drawBackground() {
   // Moon disc
   ctx.fillStyle = '#f5ecc0';
   ctx.beginPath();
-  ctx.arc(moonX, moonY, 28, 0, Math.PI * 2);
+  ctx.arc(moonX, moonY, 26, 0, Math.PI * 2);
   ctx.fill();
   // Craters
   ctx.fillStyle = 'rgba(180, 170, 120, 0.5)';
@@ -1262,12 +1283,12 @@ function drawBackground() {
   ctx.beginPath(); ctx.arc(moonX + 10, moonY - 10, 2, 0, Math.PI*2); ctx.fill();
 
   // ----- Distant mist layer behind trees -----
-  const mist = ctx.createLinearGradient(0, 280, 0, 460);
+  const mist = ctx.createLinearGradient(0, 220, 0, 400);
   mist.addColorStop(0, 'rgba(120, 180, 140, 0)');
   mist.addColorStop(0.5, 'rgba(80, 140, 110, 0.18)');
   mist.addColorStop(1, 'rgba(40, 80, 60, 0)');
   ctx.fillStyle = mist;
-  ctx.fillRect(0, 280, GW, 180);
+  ctx.fillRect(0, 220, GW, 180);
 
   // ----- Far trees (small triangular silhouettes) -----
   ctx.fillStyle = '#0a1f12';
@@ -1308,7 +1329,7 @@ function drawBackground() {
   }
 
   // ----- Hanging vines from top edge of play area (just below HUD) -----
-  const vineTop = 140;
+  const vineTop = 110;
   for (const v of jungleBG.vines) {
     const swayX = Math.sin(v.sway) * v.swayAmp;
     // Vine line with sway
@@ -1396,8 +1417,8 @@ function drawForegroundFoliage() {
 }
 
 function drawHUD() {
-  // Top panel — carved-wood look
-  const gh = 140;
+  // Top panel — carved-wood look, compact for landscape
+  const gh = 105;
   const g = ctx.createLinearGradient(0, 0, 0, gh);
   g.addColorStop(0, 'rgba(15, 20, 12, 0.95)');
   g.addColorStop(1, 'rgba(25, 35, 18, 0.92)');
@@ -1413,21 +1434,21 @@ function drawHUD() {
 
   // ----- Left: title block -----
   ctx.fillStyle = '#ffd76a';
-  ctx.font = 'bold 20px "Courier New", monospace';
+  ctx.font = 'bold 22px "Courier New", monospace';
   ctx.textAlign = 'left';
   ctx.shadowBlur = 8; ctx.shadowColor = '#ffaa00';
-  ctx.fillText('RUNWAY RAMPAGE', 18, 32);
+  ctx.fillText('RUNWAY RAMPAGE', 20, 34);
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#6ad04a';
   ctx.font = 'bold 11px "Courier New", monospace';
-  ctx.fillText('◆ PRICE BAILEY ADVISORY ◆', 18, 50);
+  ctx.fillText('◆ PRICE BAILEY ADVISORY ◆', 20, 52);
 
   // Lives indicator under title (pixel hearts)
   ctx.fillStyle = '#8a96b8';
   ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.fillText('LIVES', 18, 72);
+  ctx.fillText('LIVES', 20, 76);
   for (let i = 0; i < 2; i++) {
-    const x = 60 + i * 22, y = 64;
+    const x = 65 + i * 22, y = 68;
     if (i < player.lives) {
       ctx.fillStyle = '#ff3377';
       ctx.shadowBlur = 8; ctx.shadowColor = '#ff3377';
@@ -1445,8 +1466,8 @@ function drawHUD() {
   }
   ctx.shadowBlur = 0;
 
-  // Active power-up tags
-  let bx = 18, by = 92;
+  // Active power-up tags — placed to the right of lives, on the same row
+  let bx = 130, by = 78;
   if (player.goldAura > 0) {
     drawTag(bx, by, `R&D ${player.goldAura.toFixed(1)}s`, '#ffaa44');
     bx += 90;
@@ -1459,43 +1480,42 @@ function drawHUD() {
     drawTag(bx, by, `FREEZE ${freezeTimer.toFixed(1)}s`, '#b040ff');
   }
 
-  // ----- Center: Launch Readiness % -----
+  // ----- Center: Launch Readiness + Cash Runway side by side -----
   const totalHeight = platforms[0].y - platforms[platforms.length-1].y;
   const prog = Math.max(0, Math.min(1, (platforms[0].y - player.y) / totalHeight));
   const pct = Math.floor(prog * 100);
 
+  // Launch Readiness (left bar)
+  const lrX = GW/2 - 270;
   ctx.fillStyle = '#8a96b8';
   ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('LAUNCH READINESS', GW/2, 18);
+  ctx.textAlign = 'left';
+  ctx.fillText('LAUNCH READINESS', lrX, 22);
 
-  const barW = 240, barH = 14;
-  const barX = GW/2 - barW/2, barY = 24;
+  const barW = 220, barH = 14;
   ctx.fillStyle = 'rgba(20, 50, 25, 0.7)';
-  ctx.fillRect(barX, barY, barW, barH);
-  const lg = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+  ctx.fillRect(lrX, 28, barW, barH);
+  const lg = ctx.createLinearGradient(lrX, 0, lrX + barW, 0);
   lg.addColorStop(0, '#6ad04a'); lg.addColorStop(1, '#ffd700');
   ctx.fillStyle = lg;
-  ctx.fillRect(barX, barY, barW * prog, barH);
+  ctx.fillRect(lrX, 28, barW * prog, barH);
   ctx.strokeStyle = '#6ad04a';
   ctx.lineWidth = 1;
-  ctx.strokeRect(barX, barY, barW, barH);
+  ctx.strokeRect(lrX, 28, barW, barH);
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 12px "Courier New", monospace';
-  ctx.fillText(pct + '%', GW/2, 50);
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(pct + '%', lrX + barW, 56);
 
-  // Runway meter (below launch readiness)
+  // Cash Runway (right bar, same row)
+  const crX = GW/2 + 40;
   ctx.fillStyle = '#8a96b8';
   ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.fillText('CASH RUNWAY', GW/2, 70);
+  ctx.textAlign = 'left';
+  ctx.fillText('CASH RUNWAY', crX, 22);
 
-  const runwayW = 240, runwayH = 12;
-  const runwayX = GW/2 - runwayW/2, runwayY = 76;
-  ctx.fillStyle = 'rgba(80, 0, 30, 0.7)';
-  ctx.fillRect(runwayX, runwayY, runwayW, runwayH);
   const runFrac = player.runway / 100;
-  // Color shifts from green → amber → red as runway depletes
   let runColor;
   if (runFrac > 0.5) runColor = '#00ff88';
   else if (runFrac > 0.25) runColor = '#ffaa00';
@@ -1505,33 +1525,36 @@ function drawHUD() {
   if (runFrac <= 0.25) {
     const pulse = 0.6 + Math.sin(player.animTime * 12) * 0.4;
     ctx.fillStyle = `rgba(255, 50, 80, ${pulse * 0.3})`;
-    ctx.fillRect(runwayX - 4, runwayY - 4, runwayW + 8, runwayH + 8);
+    ctx.fillRect(crX - 4, 24, barW + 8, barH + 8);
   }
 
+  ctx.fillStyle = 'rgba(80, 0, 30, 0.7)';
+  ctx.fillRect(crX, 28, barW, barH);
   ctx.fillStyle = runColor;
   ctx.shadowBlur = 8; ctx.shadowColor = runColor;
-  ctx.fillRect(runwayX, runwayY, runwayW * runFrac, runwayH);
+  ctx.fillRect(crX, 28, barW * runFrac, barH);
   ctx.shadowBlur = 0;
   ctx.strokeStyle = runColor;
   ctx.lineWidth = 1;
-  ctx.strokeRect(runwayX, runwayY, runwayW, runwayH);
+  ctx.strokeRect(crX, 28, barW, barH);
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.fillText(Math.floor(player.runway) + '%', GW/2, 100);
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(Math.floor(player.runway) + '%', crX + barW, 56);
 
   // ----- Right: STUDIO VALUATION (big neon gold) -----
   ctx.textAlign = 'right';
   ctx.fillStyle = '#8a96b8';
   ctx.font = 'bold 10px "Courier New", monospace';
-  ctx.fillText('STUDIO VALUATION', GW - 18, 22);
+  ctx.fillText('STUDIO VALUATION', GW - 20, 22);
   ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 26px "Courier New", monospace';
+  ctx.font = 'bold 28px "Courier New", monospace';
   ctx.shadowBlur = 14; ctx.shadowColor = '#ffd700';
-  ctx.fillText('£' + Math.floor(player.score).toLocaleString(), GW - 18, 52);
+  ctx.fillText('£' + Math.floor(player.score).toLocaleString(), GW - 20, 54);
   ctx.shadowBlur = 0;
 
-  // ----- Mute toggle button (top right under valuation) -----
+  // ----- Mute toggle button (under valuation) -----
   ctx.fillStyle = Audio.muted ? 'rgba(80, 30, 30, 0.85)' : 'rgba(30, 60, 35, 0.85)';
   ctx.fillRect(muteBtn.x, muteBtn.y, muteBtn.w, muteBtn.h);
   ctx.strokeStyle = Audio.muted ? '#ff5577' : '#6ad04a';
@@ -1541,9 +1564,7 @@ function drawHUD() {
   const mx = muteBtn.x + muteBtn.w/2;
   const my = muteBtn.y + muteBtn.h/2;
   ctx.fillStyle = Audio.muted ? '#ff5577' : '#6ad04a';
-  // Speaker box
   ctx.fillRect(mx - 8, my - 3, 4, 6);
-  // Cone
   ctx.beginPath();
   ctx.moveTo(mx - 4, my - 5);
   ctx.lineTo(mx + 2, my - 8);
@@ -1552,7 +1573,6 @@ function drawHUD() {
   ctx.closePath();
   ctx.fill();
   if (Audio.muted) {
-    // X mark
     ctx.strokeStyle = '#ff5577';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1560,7 +1580,6 @@ function drawHUD() {
     ctx.moveTo(mx + 11, my - 5); ctx.lineTo(mx + 5, my + 5);
     ctx.stroke();
   } else {
-    // Sound waves
     ctx.strokeStyle = '#6ad04a';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -1571,10 +1590,10 @@ function drawHUD() {
     ctx.stroke();
   }
 
-  // Market Dynamics dispenser label — jungle wood tones
+  // Market Dynamics dispenser label
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(120, 80, 30, 0.35)';
-  ctx.fillRect(GW/2 - 60, gh - 14, 120, 14);
+  ctx.fillRect(GW/2 - 70, gh - 14, 140, 14);
   ctx.fillStyle = '#ffd76a';
   ctx.font = 'bold 10px "Courier New", monospace';
   ctx.fillText('▼ JUNGLE HAZARDS ▼', GW/2, gh - 3);
@@ -2226,40 +2245,40 @@ function drawCollectible(c) {
 }
 
 function drawTouchPanel() {
-  // ----- Arcade control panel base -----
   ctx.save();
-  // Panel background strip
-  const panelY = GH - 200;
+  // Panel background strip — covers the bottom 160px in landscape
+  const panelY = GH - 160;
   const panelGrad = ctx.createLinearGradient(0, panelY, 0, GH);
   panelGrad.addColorStop(0, 'rgba(10, 10, 30, 0)');
   panelGrad.addColorStop(0.3, 'rgba(15, 10, 40, 0.85)');
   panelGrad.addColorStop(1, 'rgba(25, 15, 55, 0.95)');
   ctx.fillStyle = panelGrad;
-  ctx.fillRect(0, panelY, GW, 200);
+  ctx.fillRect(0, panelY, GW, 160);
 
   // Top accent line — jungle vine green
   ctx.strokeStyle = '#6ad04a';
   ctx.lineWidth = 2;
   ctx.shadowBlur = 8; ctx.shadowColor = '#6ad04a';
   ctx.beginPath();
-  ctx.moveTo(0, panelY + 30);
-  ctx.lineTo(GW, panelY + 30);
+  ctx.moveTo(0, panelY + 24);
+  ctx.lineTo(GW, panelY + 24);
   ctx.stroke();
   ctx.shadowBlur = 0;
 
   // Panel label
   ctx.fillStyle = '#6ad04a';
-  ctx.font = 'bold 9px "Courier New", monospace';
+  ctx.font = 'bold 10px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('◆ EXPLORER CONTROLS ◆', GW/2, panelY + 18);
+  ctx.fillText('◆ EXPLORER CONTROLS ◆', GW/2, panelY + 16);
 
   // ----- Buttons -----
-  for (const name of ['left', 'right', 'up', 'jump']) {
+  for (const name of ['left', 'right', 'up', 'down', 'jump']) {
     const b = btns[name];
     const isActive = Object.values(activeTouches).includes(name) ||
                      (name === 'left' && keys.left) ||
                      (name === 'right' && keys.right) ||
                      (name === 'up' && keys.up) ||
+                     (name === 'down' && keys.down) ||
                      (name === 'jump' && keys.jump);
 
     // Carved wood bezel
@@ -2300,7 +2319,10 @@ function drawTouchPanel() {
 
     // Label
     ctx.fillStyle = '#fff';
-    ctx.font = isJump ? 'bold 26px "Courier New", monospace' : 'bold 38px "Courier New", monospace';
+    const isSmall = name === 'up' || name === 'down';
+    ctx.font = isJump ? 'bold 26px "Courier New", monospace' :
+               (isSmall ? 'bold 26px "Courier New", monospace' :
+                          'bold 38px "Courier New", monospace');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = isActive ? 6 : 0;
