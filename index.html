@@ -89,6 +89,19 @@
     max-width: 88%;
     font-family: "Courier New", monospace;
   }
+
+  /* Price Bailey logo on overlay panels */
+  .panel .pb-logo {
+    display: block;
+    margin: 0 auto 14px auto;
+    max-width: 120px;
+    width: 30%;
+    height: auto;
+    image-rendering: auto;
+    filter: drop-shadow(0 0 12px rgba(255, 215, 100, 0.35));
+    border-radius: 4px;
+  }
+
   .panel h1 {
     font-size: 30px; margin-bottom: 6px;
     color: #ffd76a;
@@ -148,6 +161,7 @@
     <div id="overlay">
       <!-- Start panel -->
       <div id="startPanel" class="panel">
+        <img class="pb-logo" src="https://raw.githubusercontent.com/price-baileymarketing-star/runway-rampage/main/PB%20Box%20Logo.jpg" alt="Price Bailey logo" onerror="this.style.display='none'">
         <h1>Runway Rampage</h1>
         <div class="sub">◆ Price Bailey Advisory ◆</div>
         <p>Climb the temple ruins to <b style="color:#ffd700">LAUNCH DAY</b>.</p>
@@ -169,6 +183,7 @@
 
       <!-- Win panel -->
       <div id="winPanel" class="panel hidden">
+        <img class="pb-logo" src="https://raw.githubusercontent.com/price-baileymarketing-star/runway-rampage/main/PB%20Box%20Logo.jpg" alt="Price Bailey logo" onerror="this.style.display='none'">
         <h1>🏆 Launch Successful 🏆</h1>
         <p>Final Studio Valuation</p>
         <h2 id="winScore">£0</h2>
@@ -179,6 +194,7 @@
 
       <!-- Lose panel -->
       <div id="losePanel" class="panel hidden">
+        <img class="pb-logo" src="https://raw.githubusercontent.com/price-baileymarketing-star/runway-rampage/main/PB%20Box%20Logo.jpg" alt="Price Bailey logo" onerror="this.style.display='none'">
         <h1 style="color:#ff5577;text-shadow:0 0 12px #ff557780;">Game Over</h1>
         <p id="loseReason">Your runway ran out.</p>
         <h2 id="loseScore">£0</h2>
@@ -738,14 +754,14 @@ window.addEventListener('keyup', e => {
   if (e.key === ' ') keys.jump = false;
 });
 
-// Touch button hit zones — split control panel for landscape tablet play
-// Left thumb: directional pad (left/right side by side, up/down stacked)
-// Right thumb: large JUMP button
+// Touch button hit zones — landscape tablet layout
+// LEFT thumb: Left + Right (movement only)
+// RIGHT thumb: Up/Down stacked next to JUMP (climbing + jumping together)
 const btns = {
   left:  { x: 30,        y: GH - 130, w: 110, h: 110, label: '◀' },
   right: { x: 150,       y: GH - 130, w: 110, h: 110, label: '▶' },
-  up:    { x: 270,       y: GH - 130, w: 90,  h: 52,  label: '▲' },
-  down:  { x: 270,       y: GH - 70,  w: 90,  h: 52,  label: '▼' },
+  up:    { x: GW - 320,  y: GH - 130, w: 90,  h: 52,  label: '▲' },
+  down:  { x: GW - 320,  y: GH - 70,  w: 90,  h: 52,  label: '▼' },
   jump:  { x: GW - 220,  y: GH - 130, w: 190, h: 110, label: 'JUMP' }
 };
 // Mute toggle hit zone — top right of canvas, drawn in HUD
